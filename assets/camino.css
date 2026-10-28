@@ -1,0 +1,19 @@
+.camino-art { position: relative; overflow: hidden; border-radius: 16px; height: 300px; }
+.camino-sky { position: absolute; inset: 0; }
+.camino-place { position: absolute; right: 14px; top: 6px; font-size: 130px; opacity: .35; line-height: 1; }
+.camino-figures { position: absolute; inset: 0; display: flex; align-items: flex-end;
+  justify-content: center; gap: 18px; padding-bottom: 42px; }
+.camino-fig { font-size: 92px; line-height: 1; animation: camino-float 3.4s ease-in-out infinite;
+  filter: drop-shadow(0 8px 10px rgba(0,0,0,.5)); }
+.camino-fig:nth-child(2) { animation-delay: .8s; font-size: 70px; }
+.camino-fig:nth-child(3) { animation-delay: 1.6s; font-size: 56px; }
+.camino-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 38px;
+  background: linear-gradient(transparent, rgba(0,0,0,.65)); }
+.camino-petal { position: absolute; top: -30px; font-size: 22px; animation: camino-fall linear infinite; opacity: .85; }
+.camino-lamp { position: absolute; left: 14px; bottom: 8px; font-size: 38px; animation: camino-flicker 1.3s infinite; }
+.camino-dark { position: absolute; inset: 0; background: #000; pointer-events: none; transition: opacity .8s; }
+
+@keyframes camino-float { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-14px) rotate(2deg); } }
+@keyframes camino-fall { to { transform: translateY(360px) rotate(300deg); } }
+@keyframes camino-flicker { 0%, 100% { transform: scale(1); filter: brightness(1); }
+  30% { transform: scale(1.08); filter: brightness(1.3); } 60% { transform: scale(.96); filter: brightness(.8); } }

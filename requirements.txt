@@ -2,3 +2,5 @@ dash>=3.0
 dash-mantine-components>=2.0
 requests>=2.32
 gunicorn>=22.0
+elevenlabs>=2.0
+python-dotenv>=1.0
