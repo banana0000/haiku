@@ -34,6 +34,19 @@ def haiku(topic):
             "from": c1, "to": c2}
 
 
+LANGS = ["Hungarian", "Spanish", "German", "French", "Italian", "Portuguese", "Japanese"]
+TRANSLATE = ("Translate this haiku into {lang}. Keep it three lines and keep the imagery; do not explain. "
+             "Reply with JSON only: {{\"lines\": [3 strings]}}\n\n{poem}")
+
+
+def translate(lines, lang):
+    r = requests.post(f"{OLLAMA_URL}/api/chat", timeout=120, json={
+        "model": MODEL, "stream": False, "format": "json", "options": {"temperature": 0.3},
+        "messages": [{"role": "user", "content": TRANSLATE.format(lang=lang, poem="\n".join(lines))}]})
+    r.raise_for_status()
+    return [str(l).strip() for l in json.loads(r.json()["message"]["content"])["lines"]][:3]
+
+
 def picture(h):
     """The haiku as a picture: a two-colour gradient, a big faint emoji scene and the poem on top."""
     return dmc.Paper(
@@ -50,7 +63,12 @@ def picture(h):
                                         "fontSize": 54, "opacity": .45}),
             dmc.Stack(gap="xs", style={"position": "relative"}, children=[
                 dmc.Text(l, size="xl", fs="italic", c="white", ff="Georgia, serif", fw=500,
-                         style={"textShadow": "0 2px 12px rgba(0,0,0,.45)"}) for l in h["lines"]])])
+                         style={"textShadow": "0 2px 12px rgba(0,0,0,.45)"}) for l in h["lines"]]
+                      + ([dmc.Divider(color="white", opacity=.35, my="xs"),
+                          dmc.Text(h["lang"], size="xs", c="white", opacity=.7, tt="uppercase")]
+                         + [dmc.Text(l, size="md", c="white", ff="Georgia, serif",
+                                     style={"textShadow": "0 2px 12px rgba(0,0,0,.45)"}) for l in h["translation"]]
+                         if h.get("translation") else []))])
 
 
 app = Dash(__name__, title="Haiku")
@@ -62,6 +80,8 @@ app.layout = dmc.MantineProvider(forceColorScheme="dark", theme={"primaryColor":
         dmc.Group(grow=True, children=[
             dmc.Select(id="c1", label="Colour 1", data=CHOICES, value="auto", allowDeselect=False),
             dmc.Select(id="c2", label="Colour 2", data=CHOICES, value="auto", allowDeselect=False)]),
+        dmc.Select(id="lang", label="Translate to", data=[{"value": "none", "label": "No translation"}] + LANGS,
+                   value="none", allowDeselect=False),
         dmc.Button("✨ Write a haiku", id="go", n_clicks=0, size="md", fullWidth=True,
                    variant="gradient", gradient={"from": "grape", "to": "pink", "deg": 45}),
         dcc.Loading(html.Div(id="out", style={"minHeight": 40}),
@@ -70,9 +90,9 @@ app.layout = dmc.MantineProvider(forceColorScheme="dark", theme={"primaryColor":
 
 
 @app.callback(Output("out", "children"), Input("go", "n_clicks"), Input("topic", "n_submit"),
-              State("topic", "value"), State("c1", "value"), State("c2", "value"),
+              State("topic", "value"), State("c1", "value"), State("c2", "value"), State("lang", "value"),
               prevent_initial_call=True)
-def write(_n, _s, topic, c1, c2):
+def write(_n, _s, topic, c1, c2, lang):
     if not topic:
         return dmc.Alert("Type a word first.", color="orange")
     try:
@@ -84,7 +104,13 @@ def write(_n, _s, topic, c1, c2):
         h["from"] = c1
     if c2 != "auto":
         h["to"] = c2
-    return picture(h)
+    note = None
+    if lang != "none":  # a fordítás hibája ne vigye el a haikut
+        try:
+            h["translation"], h["lang"] = translate(h["lines"], lang), lang
+        except (requests.RequestException, ValueError, KeyError, TypeError):
+            note = dmc.Alert(f"The haiku is ready, but the {lang} translation failed.", color="orange")
+    return dmc.Stack(gap="sm", children=[picture(h), note])
 
 
 if __name__ == "__main__":

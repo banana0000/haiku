@@ -1,6 +1,6 @@
 # Haiku
 
-Type a word or a mood and a local model (Gemma 3 via Ollama) writes a haiku. The same model picks two colours and a few emoji, and the app paints the poem as a gradient card. You can also choose the colours yourself.
+Type a word or a mood and a local model (Gemma 3 via Ollama) writes a haiku. The same model picks two colours and a few emoji, and the app paints the poem as a gradient card. You can also choose the colours yourself, and translate the haiku into Hungarian, Spanish, German, French, Italian, Portuguese or Japanese.
 
 Built for the Hacktoberfest Open-Source AI Challenge: Week 4 (Ghost in the Machine). Everything runs locally; the only network call goes to your own Ollama server.
 
