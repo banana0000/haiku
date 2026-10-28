@@ -60,7 +60,11 @@ There is no image model involved. The "picture" is a gradient, a large transluce
 
 ## Run it
 
+Code: [banana0000/haiku-gemma-ollama](https://github.com/banana0000/haiku-gemma-ollama)
+
 ```bash
+git clone https://github.com/banana0000/haiku-gemma-ollama
+cd haiku-gemma-ollama
 ollama pull gemma3:4b
 pip install -r requirements.txt
 python app.py
