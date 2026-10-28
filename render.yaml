@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: haiku-gemma
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:server
+    envVars:
+      - key: OLLAMA_URL   # must point at an Ollama server the Render service can reach
+        sync: false
+      - key: HAIKU_MODEL
+        value: gemma3:4b
