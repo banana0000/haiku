@@ -3,13 +3,9 @@ services:
     name: haiku
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:server --timeout 120
+    startCommand: gunicorn app:server
     envVars:
-      - key: GOOGLE_API_KEY   # Gemini writes the haiku; set it in the Render dashboard
+      - key: OLLAMA_URL   # must point at an Ollama server the Render service can reach
         sync: false
-      - key: GEMINI_MODEL
-        value: gemini-3.1-flash-lite
-      - key: HIDE_TOOLS   # only the Voice and Music buttons are shown
-        value: "1"
-      - key: ELEVENLABS_API_KEY   # optional: read aloud and music
-        sync: false
+      - key: HAIKU_MODEL
+        value: gemma3:4b
