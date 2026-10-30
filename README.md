@@ -1,3 +1,12 @@
+---
+title: Haunted Haiku
+emoji: 👻
+colorFrom: purple
+colorTo: pink
+sdk: docker
+app_port: 7860
+---
+
 # Haiku
 
 Type a word or a mood and a local model (Gemma 3 via Ollama) writes a haiku. The same model picks two colours and a few emoji, and the app paints the poem as a gradient card. You can also choose the colours yourself, and translate the haiku into Hungarian, Spanish, German, French, Italian, Portuguese or Japanese.
@@ -24,4 +33,8 @@ Open http://localhost:8063.
 
 ## Deploying (Render)
 
-`render.yaml` and `gunicorn app:server` are included. The app itself is light, but Render's free instance is far too small to run Ollama, so `OLLAMA_URL` has to point to an Ollama server the service can reach.
+`render.yaml` deploys the `Dockerfile` (Ollama and `gemma3:4b` baked in) as a Docker web service. It needs the Standard plan (4 GB RAM); set `ELEVENLABS_API_KEY` in the Render dashboard.
+
+## Deploying (Hugging Face Spaces)
+
+Create a Docker Space and push this repo. The `Dockerfile` installs Ollama and bakes in `gemma3:4b`, so the whole app (model included) runs inside the Space. Add `ELEVENLABS_API_KEY` under Settings → Secrets for voice and music.
