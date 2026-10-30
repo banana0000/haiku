@@ -3,6 +3,7 @@ emoji for its picture. Everything runs locally."""
 import base64
 import json
 import os
+import random
 
 import dash_mantine_components as dmc
 import requests
@@ -27,11 +28,19 @@ PROMPT = (
 
 def haiku(topic, n=3):
     form = "haiku (3 lines, 5-7-5 syllables)" if n == 3 else f"short haiku-style poem of exactly {n} lines"
-    r = requests.post(f"{OLLAMA_URL}/api/chat", timeout=120, json={
-        "model": MODEL, "stream": False, "format": "json", "options": {"temperature": 0.9},
-        "messages": [{"role": "user", "content": PROMPT.format(topic=topic, form=form, n=n)}]})
-    r.raise_for_status()
-    d = json.loads(r.json()["message"]["content"])
+    for _ in range(3):  # a kis modell néha üres {} JSON-t ad, ilyenkor újra kérjük
+        r = requests.post(f"{OLLAMA_URL}/api/chat", timeout=120, json={
+            "model": MODEL, "stream": False, "format": "json", "options": {"temperature": 0.9},
+            "messages": [{"role": "user", "content": PROMPT.format(topic=topic, form=form, n=n)}]})
+        r.raise_for_status()
+        try:
+            d = json.loads(r.json()["message"]["content"])
+        except ValueError:
+            continue
+        if isinstance(d, dict) and isinstance(d.get("lines"), list) and d["lines"]:
+            break
+    else:
+        raise ValueError("the model returned no lines")
     c1 = d.get("from") if d.get("from") in COLORS else "grape"
     c2 = d.get("to") if d.get("to") in COLORS and d.get("to") != c1 else ("pink" if c1 != "pink" else "indigo")
     c1, c2 = HEX[c1], HEX[c2]  # a kép hexet használ, mert a színválasztó is azt ad
@@ -55,18 +64,39 @@ def mix(hexc, other, pct):
     return "#" + "".join(f"{round(x * pct / 100 + y * (100 - pct) / 100):02x}" for x, y in zip(a, b))
 
 
-def speak(text):
+VOICES = {  # ElevenLabs premade voices
+    "George (male, warm)": "JBFqnCBsd6RMkjVDRZzb", "Daniel (male, deep narrator)": "onwK4e9ZLuTAKqWW03F9",
+    "Brian (male, resonant)": "nPczCjzI2devNBz1zQrb", "Callum (male, husky)": "N2lVS1w4EtoT3dr4eOWO",
+    "Rachel (female, calm)": "21m00Tcm4TlvDq8ikWAM", "Alice (female, British)": "Xb7hH8MSUJpSbSDYk0k2",
+    "Charlotte (female, mysterious)": "XB0fDUnXU5powFXDhCwa", "Matilda (female, warm)": "XrExE9yKIg1WjnnlVkGX",
+    "Lily (female, soft)": "pFZP5JQG7iQjIQuC4Bku"}
+
+
+def speak(text, voice=None):
     """ElevenLabs text-to-speech via the SDK (reads ELEVENLABS_API_KEY); returns an mp3 data URI."""
     client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))  # az SDK importkor olvasná, a .env addigra még nincs betöltve
-    audio = client.text_to_speech.convert(text=text, voice_id=ELEVEN_VOICE, model_id="eleven_v4")
+    audio = client.text_to_speech.convert(text=text, voice_id=voice or ELEVEN_VOICE, model_id="eleven_v4")
     return "data:audio/mpeg;base64," + base64.b64encode(b"".join(audio)).decode()
 
 
-def music(text):
+MUSIC_STYLES = [
+    "music box and soft choir whispers", "slow cello and distant church bells", "detuned piano with wind and creaks",
+    "dark ambient drones and reversed sounds", "mariachi guitar and violin, a ghostly Dia de los Muertos ballad",
+    "harp and glass harmonica in an empty hall", "pipe organ with a lonely flute",
+    "heartbeat percussion and whispered synth pads", "haunted waltz with accordion",
+    "ethereal female vocals humming over strings"]
+MUSIC_STYLES += ["creepy lullaby with a toy piano", "dark jazz with a muted trumpet", "ominous synth drone and ticking clock",
+                 "gothic harpsichord and choir", "distant thunder, rain and a lonely violin"]
+MUSIC_KEYS = ["A minor", "D minor", "E minor", "C# minor", "F minor", "G minor", "B minor"]
+
+
+def music(text, style=None):
     """ElevenLabs Music: a short instrumental backing track that fits the poem; returns an mp3 data URI."""
     client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
+    style = style or random.choice(MUSIC_STYLES)  # véletlen: minden gombnyomásra más hangszer, tempó és hangulat
     audio = client.music.compose(
-        prompt=f"Eerie, haunted instrumental ambient music, slow and quiet, for this poem: {text}",
+        prompt=f"Eerie, haunted instrumental music, {style}, in the key of {random.choice(MUSIC_KEYS)}, "
+               f"{random.randint(50, 90)} BPM, for this poem: {text}",
         music_length_ms=20000, force_instrumental=True)
     return "data:audio/mpeg;base64," + base64.b64encode(b"".join(audio)).decode()
 
@@ -93,7 +123,16 @@ def picture(h):
                          style={"textShadow": "0 2px 12px rgba(0,0,0,.45)"}) for l in h["lines"]])])
 
 
-HTML2CANVAS = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+def player(src, label, loop=False):
+    """Styled audio player (assets/player.css + player.js); the real <audio> is hidden and autoplays."""
+    return html.Div(className="hplayer", children=[
+        html.Button("▶", className="hp-btn"), html.Span(label, className="hp-label"),
+        html.Div(className="hp-bar", children=html.Div(className="hp-fill")),
+        html.Span("0:00 / 0:00", className="hp-time"),
+        html.Audio(src=src, autoPlay=True, loop=loop, style={"display": "none"})])
+
+
+HTML2CANVAS ="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
 BLACK = {"backgroundColor": "#000", "color": "#fff", "borderColor": "#5a2a6b", "fontSize": 16,
          "boxShadow": "0 0 14px rgba(190,75,219,.25)"}  # fekete beviteli mező, lila fénnyel
 
@@ -121,6 +160,11 @@ app.layout = dmc.MantineProvider(forceColorScheme="dark", theme={"primaryColor":
             variant="gradient", gradient={"from": "grape", "to": "pink", "deg": 45})),
         dcc.Loading(html.Div(id="out", style={"minHeight": 40}),
                     custom_spinner=dmc.Loader(type="dots", color="pink")),
+        dmc.Group(grow=True, children=[
+            dmc.Select(id="voice-pick", label="Voice", data=list(VOICES), value=None, clearable=True,
+                       placeholder="Default voice (optional)", size="xs", comboboxProps={"withinPortal": False}),
+            dmc.Select(id="music-pick", label="Music", data=MUSIC_STYLES, value=None, clearable=True,
+                       placeholder="Random style (optional)", size="xs", comboboxProps={"withinPortal": False})]),
         dmc.Group(justify="center", gap="xs", children=[
             dmc.Button("🔊 Read aloud", id="speak", n_clicks=0, variant="light", color="gray", size="xs"),
             dmc.Button("🎵 Add music", id="music", n_clicks=0, variant="light", color="gray", size="xs"),
@@ -179,31 +223,31 @@ def write(_n, _s, topic, auto, c1, nlines):
 
 
 @app.callback(Output("voice", "children"), Input("speak", "n_clicks"), State("current", "data"),
-              prevent_initial_call=True)
-def read_aloud(_n, text):
+              State("voice-pick", "value"), prevent_initial_call=True)
+def read_aloud(_n, text, voice):
     if not text:
         return dmc.Alert("Write a haiku first.", color="orange")
     if not os.getenv("ELEVENLABS_API_KEY"):
         return dmc.Alert("Add ELEVENLABS_API_KEY to the .env file and restart the app.", color="orange")
     try:
-        src = speak(text)
+        src = speak(text, VOICES.get(voice))
     except Exception:  # SDK errors: bad key, no credits, network
         return dmc.Alert("ElevenLabs could not read it (check the API key and credits).", color="red")
-    return html.Audio(src=src, controls=True, autoPlay=True, style={"width": "100%"})
+    return player(src, "🔊 Voice")
 
 
 @app.callback(Output("tune", "children"), Input("music", "n_clicks"), State("current", "data"),
-              prevent_initial_call=True)
-def add_music(_n, text):
+              State("music-pick", "value"), prevent_initial_call=True)
+def add_music(_n, text, style):
     if not text:
         return dmc.Alert("Write a haiku first.", color="orange")
     if not os.getenv("ELEVENLABS_API_KEY"):
         return dmc.Alert("Add ELEVENLABS_API_KEY to the .env file and restart the app.", color="orange")
     try:
-        src = music(text)
+        src = music(text, style if style in MUSIC_STYLES else None)
     except Exception:  # SDK errors: bad key, free plan (music needs a paid plan), no credits, network
         return dmc.Alert("ElevenLabs could not make the music (music needs a paid plan and credits).", color="red")
-    return html.Audio(src=src, controls=True, autoPlay=True, loop=True, style={"width": "100%"})
+    return player(src, "🎵 Music", loop=True)
 
 
 app.clientside_callback(
