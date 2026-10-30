@@ -31,9 +31,7 @@ Open http://localhost:8063.
 | `HAIKU_MODEL` | `gemma3:4b` | any Ollama model |
 | `HOST` / `PORT` | `127.0.0.1` / `8063` | where the app listens |
 
-## Deploying (Render)
-
-`render.yaml` deploys the `Dockerfile` (Ollama and `gemma3:4b` baked in) as a Docker web service. It needs the Standard plan (4 GB RAM); set `ELEVENLABS_API_KEY` in the Render dashboard.
+`render.yaml` and `gunicorn app:server` are included. The app itself is light, but Render's free instance is far too small to run Ollama, so `OLLAMA_URL` has to point to an Ollama server the service can reach.
 
 ## Deploying (Hugging Face Spaces)
 

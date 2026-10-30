@@ -1,11 +1,11 @@
 services:
   - type: web
     name: haiku
-    runtime: docker
-    plan: standard   # gemma3:4b needs ~4 GB RAM, the free instance is too small
-    dockerfilePath: ./Dockerfile
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:server
     envVars:
+      - key: OLLAMA_URL   # must point at an Ollama server the Render service can reach
+        sync: false
       - key: HAIKU_MODEL
         value: gemma3:4b
-      - key: ELEVENLABS_API_KEY
-        sync: false
